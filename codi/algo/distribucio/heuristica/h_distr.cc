@@ -38,59 +38,101 @@ double fragmentacion_cliente(const Solucion& s) {
     return penalizacion;
 }
 
-// F3: Accesibilidad en descarga + restricción barriles sobre cajas
-// orden_ruta: cliente_id ordenados por orden de entrega (primero se entrega orden_ruta[0]).
-// Penaliza:
-//   a) Ítems de un cliente "temprano" bloqueados por ítems de cliente "tardío" en pisos superiores
-//   b) Barriles colocados encima de cajas en el mismo palé
+bool es_accesible(const Solucion& s, int pal, int piso, int fila, int col) {
+    for (int p = piso + 1; p < Solucion::PISOS; ++p)
+        if (!s.layout[pal][p][fila][col].vacio())
+            return false;
+
+    bool es_furgoneta = (s.n_palets <= 3);
+    bool es_camion_8 = (s.n_palets >= 7);
+
+    if (es_camion_8 && pal <= 1)
+        return true;
+
+    bool desde_fila_0 = !es_furgoneta && (pal % 2 == 0);
+
+    if (desde_fila_0) {
+        for (int f = 0; f < fila; ++f)
+            if (!s.layout[pal][piso][f][col].vacio())
+                return false;
+    } else {
+        for (int f = fila + 1; f < Solucion::FILAS; ++f)
+            if (!s.layout[pal][piso][f][col].vacio())
+                return false;
+    }
+
+    return true;
+}
+
 double accesibilidad(const Solucion& s, const vector<uint16_t>& orden_ruta) {
     unordered_map<uint16_t, int> orden;
     for (int i = 0; i < (int)orden_ruta.size(); ++i)
         orden[orden_ruta[i]] = i;
 
+    bool es_furgoneta = (s.n_palets <= 3);
+    bool es_camion_8 = (s.n_palets >= 7);
+
     double penalizacion = 0.0;
 
     for (int pal = 0; pal < s.n_palets; ++pal) {
+        bool acceso_completo = (es_camion_8 && pal <= 1);
+        bool desde_fila_0 = !es_furgoneta && (pal % 2 == 0);
+
         for (int piso = 0; piso < Solucion::PISOS; ++piso) {
             bool piso_tiene_barril = false;
-
             for (int f = 0; f < Solucion::FILAS; ++f)
                 for (int c = 0; c < Solucion::COLS; ++c)
                     if (!s.layout[pal][piso][f][c].vacio() && s.layout[pal][piso][f][c].es_barril)
                         piso_tiene_barril = true;
 
-            // Barril encima de caja: comprobar pisos inferiores
             if (piso_tiene_barril) {
-                for (int piso_inf = 0; piso_inf < piso; ++piso_inf)
+                for (int p_inf = 0; p_inf < piso; ++p_inf)
                     for (int f = 0; f < Solucion::FILAS; ++f)
                         for (int c = 0; c < Solucion::COLS; ++c) {
-                            const Item& inf = s.layout[pal][piso_inf][f][c];
+                            const Item& inf = s.layout[pal][p_inf][f][c];
                             if (!inf.vacio() && !inf.es_barril)
                                 penalizacion += 10.0;
                         }
             }
 
-            // Accesibilidad: ítems bloqueados por clientes posteriores arriba
-            for (int f = 0; f < Solucion::FILAS; ++f)
+            for (int f = 0; f < Solucion::FILAS; ++f) {
                 for (int c = 0; c < Solucion::COLS; ++c) {
                     const Item& item = s.layout[pal][piso][f][c];
                     if (item.vacio()) continue;
 
-                    auto it_ord = orden.find(item.cliente_id);
-                    if (it_ord == orden.end()) continue;
-                    int mi_orden = it_ord->second;
+                    auto it = orden.find(item.cliente_id);
+                    if (it == orden.end()) continue;
+                    int mi_orden = it->second;
 
-                    for (int piso_sup = piso + 1; piso_sup < Solucion::PISOS; ++piso_sup)
-                        for (int f2 = 0; f2 < Solucion::FILAS; ++f2)
-                            for (int c2 = 0; c2 < Solucion::COLS; ++c2) {
-                                const Item& sup = s.layout[pal][piso_sup][f2][c2];
-                                if (sup.vacio()) continue;
-                                auto it_sup = orden.find(sup.cliente_id);
-                                if (it_sup == orden.end()) continue;
-                                if (it_sup->second > mi_orden)
+                    for (int p = piso + 1; p < Solucion::PISOS; ++p) {
+                        const Item& sup = s.layout[pal][p][f][c];
+                        if (sup.vacio()) continue;
+                        auto it2 = orden.find(sup.cliente_id);
+                        if (it2 != orden.end() && it2->second > mi_orden)
+                            penalizacion += 1.0;
+                    }
+
+                    if (!acceso_completo) {
+                        if (desde_fila_0) {
+                            for (int f2 = 0; f2 < f; ++f2) {
+                                const Item& lat = s.layout[pal][piso][f2][c];
+                                if (lat.vacio()) continue;
+                                auto it2 = orden.find(lat.cliente_id);
+                                if (it2 != orden.end() && it2->second > mi_orden)
                                     penalizacion += 1.0;
                             }
+                        } else {
+                            for (int f2 = f + 1; f2 < Solucion::FILAS; ++f2) {
+                                const Item& lat = s.layout[pal][piso][f2][c];
+                                if (lat.vacio()) continue;
+                                auto it2 = orden.find(lat.cliente_id);
+                                if (it2 != orden.end() && it2->second > mi_orden)
+                                    penalizacion += 1.0;
+                            }
+                        }
+                    }
                 }
+            }
         }
     }
 
