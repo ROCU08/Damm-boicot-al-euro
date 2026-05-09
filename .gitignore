@@ -1,0 +1,69 @@
+# =============================================================================
+# C++ build artifacts
+# =============================================================================
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Binario producido por el Makefile
+damm
+damm.exe
+
+# Compile DBs / caches
+compile_commands.json
+.cache/
+
+# Sanitizers / profiling
+*.gcda
+*.gcno
+*.gcov
+*.profraw
+*.profdata
+
+# =============================================================================
+# Python (visualizador)
+# =============================================================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# =============================================================================
+# Outputs del pipeline
+# =============================================================================
+# JSONs generados por el binario en pruebas
+salida.json
+out.json
+test*.json
+gA.json
+gB.json
+v[1-9]*.json
+s[0-9]*.json
+big.json
+
+# Imágenes generadas por el visualizador
+viz/output/
+
+# =============================================================================
+# IDEs / editores
+# =============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+# Worktrees y herramientas locales
+# =============================================================================
+.claude/worktrees/
