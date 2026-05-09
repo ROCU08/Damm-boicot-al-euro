@@ -33,10 +33,10 @@ struct PosHash {
 };
 
 struct Solucion {
-    static constexpr int MAX_PALETS = 10;
+    static constexpr int MAX_PALETS = 8;
     static constexpr int PISOS = 6;
-    static constexpr int FILAS = 2;
-    static constexpr int COLS = 5;
+    static constexpr int FILAS = 5;
+    static constexpr int COLS = 2;
 
     Item layout[MAX_PALETS][PISOS][FILAS][COLS];
     int n_palets;
