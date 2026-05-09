@@ -66,9 +66,9 @@ ResultadoCover greedy_cover(const DatosProblema& datos, const vector<bool>& obje
     return r;
 }
 
-// Reordena los dos vectores en paralelo aplicando nearest neighbor desde
-// la primera entrada. Útil tras seleccionar un conjunto de paradas para
-// reducir la distancia recorrida.
+// Reordena los dos vectores en paralelo aplicando nearest neighbor.
+// La semilla es la parada más cercana al depósito (minimiza el tramo de
+// salida); a partir de ahí se encadena por proximidad.
 void nn_reorder(vector<int>& paradas,
                 vector<vector<int>>& clientes_por_parada,
                 const DatosProblema& datos) {
@@ -76,13 +76,23 @@ void nn_reorder(vector<int>& paradas,
     if (n < 2) return;
     int M = (int)datos.paradas.size();
 
+    // Buscar la parada más cercana al depósito como punto de arranque.
+    int seed = 0;
+    if (!datos.dist_deposito.empty()) {
+        double min_d = datos.dist_deposito[paradas[0]];
+        for (int i = 1; i < n; ++i) {
+            double d = datos.dist_deposito[paradas[i]];
+            if (d < min_d) { min_d = d; seed = i; }
+        }
+    }
+
     vector<int> nuevo_p;
     vector<vector<int>> nuevo_c;
     vector<bool> usado(n, false);
 
-    nuevo_p.push_back(paradas[0]);
-    nuevo_c.push_back(clientes_por_parada[0]);
-    usado[0] = true;
+    nuevo_p.push_back(paradas[seed]);
+    nuevo_c.push_back(clientes_por_parada[seed]);
+    usado[seed] = true;
 
     for (int step = 1; step < n; ++step) {
         int actual = nuevo_p.back();

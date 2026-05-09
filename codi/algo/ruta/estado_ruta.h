@@ -95,13 +95,26 @@ struct RutaCamion {
 // Datos inmutables del problema.
 // Las matrices de distancia y tiempo vienen precalculadas ENTRE PARADAS.
 // Acceso lineal: idx = i * paradas.size() + j.
+// El depósito se trata aparte vía dist_deposito / tiempo_deposito (cada
+// camión sale del depósito hacia su primera parada y vuelve al depósito
+// tras la última).
 struct DatosProblema {
+    // Posición del centro logístico (depósito). La coordenada solo se usa
+    // para visualización; el SA consume directamente los vectores de
+    // distancia/tiempo de abajo.
+    Coord deposito;
+
     vector<Cliente> clientes;
     vector<Camion> camiones;
     vector<Parada> paradas;
 
     vector<double> matriz_distancia;   // M x M con M = paradas.size()
     vector<double> matriz_tiempo;
+
+    // Tramo depósito ↔ parada i. Tamaño = paradas.size().
+    // Asumimos simetría depósito→parada == parada→depósito.
+    vector<double> dist_deposito;
+    vector<double> tiempo_deposito;
 };
 
 // Solución completa de la VRP. La posición del vector indica el id del camión.

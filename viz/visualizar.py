@@ -56,6 +56,8 @@ def imprimir_resumen(datos_json):
 def plot_mapa(json_data, ruta_salida):
     paradas = json_data["datos"]["paradas"]
     rutas = json_data["solucion"]["rutas"]
+    deposito = json_data["datos"].get("deposito", {"x": 0.0, "y": 0.0})
+    dx, dy = deposito["x"], deposito["y"]
 
     # Coordenadas indexadas por id de parada.
     pos_x = {p["id"]: p["x"] for p in paradas}
@@ -84,6 +86,13 @@ def plot_mapa(json_data, ruta_salida):
         xs = [pos_x[p] for p in r["paradas"]]
         ys = [pos_y[p] for p in r["paradas"]]
 
+        # Tramos depósito → primera parada y última parada → depósito (discontinuos
+        # para distinguirlos del resto de la ruta).
+        ax.plot([dx, xs[0]], [dy, ys[0]], linestyle="--", color=color,
+                linewidth=1.5, zorder=2)
+        ax.plot([xs[-1], dx], [ys[-1], dy], linestyle="--", color=color,
+                linewidth=1.5, zorder=2)
+
         # Polilínea conectando las paradas consecutivas.
         ax.plot(xs, ys, "-", color=color, linewidth=2, zorder=2,
                 label=f"Camión {r['camion_id']} (d={r['total_distancia']:.1f})")
@@ -102,6 +111,14 @@ def plot_mapa(json_data, ruta_salida):
                     (xs[0], ys[0]), textcoords="offset points",
                     xytext=(10, -14), fontsize=10, fontweight="bold",
                     color=color, zorder=5)
+
+    # Depósito: estrella negra prominente, por encima de todo.
+    ax.scatter([dx], [dy], marker="*", s=400, c="black",
+               edgecolors="white", linewidths=1.5, zorder=6,
+               label="Centro logístico")
+    ax.annotate("Depósito", (dx, dy), textcoords="offset points",
+                xytext=(10, 10), fontsize=10, fontweight="bold",
+                color="black", zorder=7)
 
     ax.set_xlabel("x")
     ax.set_ylabel("y")

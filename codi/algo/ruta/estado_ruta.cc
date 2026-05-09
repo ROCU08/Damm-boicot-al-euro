@@ -84,6 +84,11 @@ void recalcular_ruta(RutaCamion& ruta,
     double total_retraso = 0.0;
     double t = (double)camion.hora_inicio;
 
+    // Tramo depósito → primera parada.
+    int primera = ruta.paradas[0];
+    total_dist += datos.dist_deposito[primera];
+    t          += datos.tiempo_deposito[primera];
+
     for (int i = 0; i < n; ++i) {
         AggVisita agg = agregar_visita(ruta.clientes_atendidos[i], datos.clientes);
 
@@ -116,6 +121,11 @@ void recalcular_ruta(RutaCamion& ruta,
             t          += datos.matriz_tiempo[origen * n_paradas + destino];
         }
     }
+
+    // Tramo última parada → depósito (cierra el ciclo).
+    int ultima = ruta.paradas.back();
+    total_dist += datos.dist_deposito[ultima];
+    t          += datos.tiempo_deposito[ultima];
 
     ruta.total_carga_inicial  = carga_ini;
     ruta.total_distancia      = total_dist;

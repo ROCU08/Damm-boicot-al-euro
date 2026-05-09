@@ -1,5 +1,5 @@
 CXX      = g++
-CXXFLAGS = -std=c++17 -O2 -Wall -Wno-unused-parameter
+CXXFLAGS = -std=c++17 -O2 -Wall -Wno-unused-parameter -MMD -MP
 
 # sa.cc es solo template; se incluye desde main.cc, NO se compila aparte.
 SRCS = codi/main.cc \
@@ -11,6 +11,7 @@ SRCS = codi/main.cc \
        codi/io/exportar.cc
 
 OBJS = $(SRCS:.cc=.o)
+DEPS = $(OBJS:.o=.d)
 
 TARGET = damm
 
@@ -22,7 +23,15 @@ $(TARGET): $(OBJS)
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-clean:
-	rm -f $(OBJS) $(TARGET)
+# Auto-rastreo de dependencias (.h tocado → recompila los .o que lo incluyen).
+-include $(DEPS)
 
-.PHONY: all clean
+clean:
+	rm -f $(OBJS) $(DEPS) $(TARGET) $(TARGET).exe
+
+# Build para depurar: sanitizers + símbolos. Crea binario `damm-debug`.
+debug: CXXFLAGS = -std=c++17 -O0 -g -Wall -Wno-unused-parameter -MMD -MP -fsanitize=address,undefined
+debug: TARGET = damm-debug
+debug: $(TARGET)
+
+.PHONY: all clean debug

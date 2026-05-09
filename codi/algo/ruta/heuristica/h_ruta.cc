@@ -18,6 +18,7 @@ double calcular_coste(const EstadoRuta& estado,
     for (int k = 0; k < (int)estado.rutas.size(); ++k) {
         const RutaCamion& ruta = estado.rutas[k];
         if (ruta.paradas.empty()) continue;
+        
 
         const Camion& camion = datos.camiones[k];
 

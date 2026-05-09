@@ -28,6 +28,9 @@ DatosProblema generar_dataset(int n_clientes, int n_paradas, int n_camiones,
     mt19937 gen(seed);
     DatosProblema datos;
 
+    // Centro logístico: en el centro del área para que las rutas radien.
+    datos.deposito = {50.0, 50.0};
+
     uniform_real_distribution<> coord(0.0, 100.0);
     uniform_real_distribution<> vol_recoger(2.0, 8.0);
     uniform_real_distribution<> vol_devolver(0.0, 3.0);
@@ -112,6 +115,17 @@ DatosProblema generar_dataset(int n_clientes, int n_paradas, int n_camiones,
             datos.matriz_distancia[i*M + j] = d;
             datos.matriz_tiempo[i*M + j] = d / vel;
         }
+    }
+
+    // Vectores depósito ↔ parada (también euclidianos, simétricos).
+    datos.dist_deposito.assign(M, 0.0);
+    datos.tiempo_deposito.assign(M, 0.0);
+    for (int i = 0; i < M; ++i) {
+        double dx = datos.deposito.x - datos.paradas[i].pos.x;
+        double dy = datos.deposito.y - datos.paradas[i].pos.y;
+        double d = sqrt(dx*dx + dy*dy);
+        datos.dist_deposito[i] = d;
+        datos.tiempo_deposito[i] = d / vel;
     }
 
     return datos;

@@ -129,6 +129,9 @@ bool exportar_json(const EstadoRuta& estado,
     // datos
     f << "  \"datos\":{\n";
 
+    f << "    \"deposito\":{\"x\":" << datos.deposito.x
+      << ",\"y\":" << datos.deposito.y << "},\n";
+
     f << "    \"clientes\":[";
     f << join(datos.clientes.begin(), datos.clientes.end(), ",", cliente_json);
     f << "],\n";
