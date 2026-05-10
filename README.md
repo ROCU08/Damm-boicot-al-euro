@@ -117,6 +117,114 @@ make clean        # binarios + .o + .d + JSONs raíz
 make clean-all    # también borra viz/output/
 ```
 
+## Scripts disponibles
+
+El proyecto incluye varios scripts automáticos para diferentes flujos de trabajo:
+
+### `run.sh` – Compilación rápida + ejecución básica
+Compila el solver y ejecuta una prueba rápida con visualización.
+
+```bash
+./run.sh
+```
+
+**Flujo:**
+1. Compila con `g++ -std=c++14 -O2`
+2. Ejecuta el SA
+3. Visualiza resultados con `visualizar.py`
+
+**Cuándo usarlo:** Desarrollo rápido y pruebas locales (Linux/macOS).
+
+---
+
+### `start_all.sh` – Pipeline completo para todos los días (Linux/macOS)
+Ejecuta el pipeline completo secuencialmente para cada día de la semana (lunes, martes, miércoles, jueves, viernes, pruebas_SA).
+
+```bash
+./start_all.sh
+```
+
+**Flujo por día:**
+1. Limpia y recompila los binarios
+2. Ejecuta `make pipeline` para generar `out_<día>/resultado.json`
+3. Lanza `npm run dev` en el frontend
+
+**Nota:** El script se pausa en cada día porque `npm run dev` ejecuta un servidor bloqueante. Presiona `Ctrl+C` para pasar al siguiente día.
+
+**Cuándo usarlo:** Procesar todos los días de una semana automáticamente.
+
+---
+
+### `start_all.bat` – Pipeline para un día específico (Windows)
+Versión Windows que ejecuta el pipeline completo para un único día especificado por número.
+
+```cmd
+start_all.bat <numero>
+```
+
+**Parámetros:**
+- `1` → lunes
+- `2` → martes
+- `3` → miércoles
+- `4` → jueves
+- `5` → viernes
+
+**Ejemplo:**
+```cmd
+start_all.bat 1
+```
+
+**Flujo:**
+1. Limpia y recompila los binarios
+2. Ejecuta `make pipeline` para el día seleccionado
+3. Abre `npm run dev` en una nueva ventana del frontend
+
+**Cuándo usarlo:** Procesar un día específico en Windows.
+
+---
+
+### `visualizar.py` – Visualización 3D de palets
+Genera gráficos 3D de la distribución de ítems en cada palet desde un archivo JSON de resultado.
+
+```bash
+python3 visualizar.py [archivo.json]
+```
+
+**Parámetros:**
+- `archivo.json` (opcional): Ruta al archivo de resultado. Por defecto: `resultado.json`
+
+**Salida:**
+- Ventana interactiva con subplots 3D (uno por palet)
+- Código de color por cliente para identificar patrones
+
+**Ejemplo:**
+```bash
+python3 visualizar.py out_lunes/resultado.json
+```
+
+**Cuándo usarlo:** Inspeccionar visualmente cómo se distribuyen los ítems en los palets tras la optimización.
+
+---
+
+### `analizar_resultados.py` – Análisis experimental
+Analiza resultados de experimentos y genera gráficos estadísticos (comparación de operadores, convergencia, etc.).
+
+```bash
+python3 analizar_resultados.py [archivo_csv]
+```
+
+**Requisitos:**
+- Entrada: CSV con columnas `experimento`, `config`, `fitness_fin`, etc.
+- Ubicación esperada: `viz/output/experimentos.csv`
+
+**Salida:**
+- Gráficos boxplot, histogramas y trazas de convergencia
+- Guardados en `viz/output/`
+
+**Cuándo usarlo:** Análisis comparativo de configuraciones de SA y rendimiento de operadores.
+
+---
+
 ## Reglas de modelado importantes
 
 - **1 cliente = 1 parada** en el cargador actual (cada cliente tiene su propia parada en el mismo punto). El SA-ruta soporta varios clientes por parada (set cover) pero la fuente actual no agrupa direcciones; cuando lo hagamos vivirá en `cargar_csv.py` usando `loading_points_per_client.csv`.
