@@ -44,9 +44,17 @@ struct Solucion {
 
     unordered_map<uint16_t, vector<Pos>> por_material;
     unordered_map<uint16_t, vector<Pos>> por_cliente;
+    vector<Pos> ocupados;
+    vector<Pos> vacios;
 
-    Solucion() : n_palets(0) {
+    Solucion(int n_pal = 0) : n_palets(n_pal) {
         memset(layout, 0, sizeof(layout));
+        vacios.reserve(n_pal * PISOS * FILAS * COLS);
+        for (int pal = 0; pal < n_pal; ++pal)
+            for (int piso = 0; piso < PISOS; ++piso)
+                for (int f = 0; f < FILAS; ++f)
+                    for (int c = 0; c < COLS; ++c)
+                        vacios.push_back({(uint8_t)pal, (uint8_t)piso, (uint8_t)f, (uint8_t)c});
     }
 
     const Item& get(Pos p) const {
@@ -59,6 +67,11 @@ struct Solucion {
 
     void agregar_a_indice(uint16_t id, Pos p, unordered_map<uint16_t, vector<Pos>>& indice) {
         indice[id].push_back(p);
+    }
+
+    void quitar_pos(vector<Pos>& v, Pos p) {
+        for (size_t i = 0; i < v.size(); ++i)
+            if (v[i] == p) { v[i] = v.back(); v.pop_back(); return; }
     }
 
     void quitar_de_indice(uint16_t id, Pos p, unordered_map<uint16_t, vector<Pos>>& indice) {
@@ -76,6 +89,8 @@ struct Solucion {
         if (!item.vacio()) {
             agregar_a_indice(item.material_id, p, por_material);
             agregar_a_indice(item.cliente_id, p, por_cliente);
+            quitar_pos(vacios, p);
+            ocupados.push_back(p);
         }
     }
 
@@ -84,6 +99,8 @@ struct Solucion {
         if (slot.vacio()) return;
         quitar_de_indice(slot.material_id, p, por_material);
         quitar_de_indice(slot.cliente_id, p, por_cliente);
+        quitar_pos(ocupados, p);
+        vacios.push_back(p);
         slot = {0, 0, false};
     }
 
