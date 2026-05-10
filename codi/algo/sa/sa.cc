@@ -1,53 +1,56 @@
-#pragma once
-#include <functional>
-#include <random>
-#include <cmath>
+
 #include <iostream>
+#include <cmath>
+#include <random>
+#include <functional>
 
 using namespace std;
 
-struct ParametrosSA {
-    double T_init;
-    double T_min;
-    double cooling_rate;
-    int iter_por_temp;
-};
-
-template <typename Estado>
-Estado simulated_annealing(
-    Estado inicial,
-    function<double(const Estado&)> costo,
-    function<Estado(const Estado&, mt19937&)> vecino,
-    ParametrosSA params,
-    mt19937& rng
+// Template genèrica per a Simulated Annealing
+template <typename State>
+State simulated_annealing(
+    State initial_state,
+    function<double(const State&)> cost_function,
+    function<State(const State&)> get_neighbor,
+    double initial_temp,
+    double final_temp,
+    double cooling_rate,
+    int iterations_per_temp
 ) {
-    Estado actual = inicial;
-    double costo_actual = costo(actual);
+    State current_state = initial_state;
+    State best_state = initial_state;
 
-    Estado mejor = actual;
-    double costo_mejor = costo_actual;
+    double current_cost = cost_function(current_state);
+    double best_cost = current_cost;
 
-    double T = params.T_init;
+    double temp = initial_temp;
 
-    while (T > params.T_min) {
-        for (int i = 0; i < params.iter_por_temp; ++i) {
-            Estado candidato = vecino(actual, rng);
-            double costo_candidato = costo(candidato);
-            double delta = costo_candidato - costo_actual;
+    // Inicialització del generador de nombres aleatoris
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_real_distribution<> dis(0.0, 1.0);
 
-            if (delta < 0 || uniform_real_distribution<double>(0.0, 1.0)(rng) < exp(-delta / T)) {
-                actual = candidato;
-                costo_actual = costo_candidato;
-            }
+    while (temp > final_temp) {
+        for (int i = 0; i < iterations_per_temp; ++i) {
+            State neighbor = get_neighbor(current_state);
+            double neighbor_cost = cost_function(neighbor);
 
-            if (costo_actual < costo_mejor) {
-                mejor = actual;
-                costo_mejor = costo_actual;
+            double cost_diff = neighbor_cost - current_cost;
+
+            // Si el veí és millor (cost menor), o s'accepta per probabilitat de Boltzmann
+            if (cost_diff < 0 || exp(-cost_diff / temp) > dis(gen)) {
+                current_state = neighbor;
+                current_cost = neighbor_cost;
+
+                // Guardem el millor resultat global trobat fins ara
+                if (current_cost < best_cost) {
+                    best_state = current_state;
+                    best_cost = current_cost;
+                }
             }
         }
-        T *= params.cooling_rate;
+        temp *= cooling_rate; // Procés de refredament
     }
 
-    cerr << "[SA] Mejor costo: " << costo_mejor << endl;
-    return mejor;
+    return best_state;
 }
