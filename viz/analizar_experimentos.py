@@ -149,20 +149,22 @@ def plot_exp2(csv_path: Path, out_dir: Path):
 def plot_exp3(csv_path: Path, out_dir: Path):
     df = pd.read_csv(csv_path)
 
-    # 1. Heatmap por cada valor de iters_temp: media_mejora over (temp_ini, cooling)
+    # 1. Heatmap por cada valor de iters_temp: media_coste_fin over (temp_ini, cooling).
+    # Usamos viridis_r para que valores BAJOS de coste (mejor) salgan en amarillo
+    # y valores altos (peor) en violeta oscuro.
     iters_vals = sorted(df["iters_temp"].unique())
     n = len(iters_vals)
     fig, axes = plt.subplots(1, n, figsize=(5*n, 4.5), squeeze=False)
     axes = axes[0]
 
-    vmin = df["media_mejora"].min()
-    vmax = df["media_mejora"].max()
+    vmin = df["media_coste_fin"].min()
+    vmax = df["media_coste_fin"].max()
 
     for ax, it in zip(axes, iters_vals):
         sub = df[df["iters_temp"] == it]
-        pivot = sub.pivot(index="temp_ini", columns="cooling", values="media_mejora")
+        pivot = sub.pivot(index="temp_ini", columns="cooling", values="media_coste_fin")
         im = ax.imshow(pivot.values, aspect="auto", origin="lower",
-                       cmap="viridis", vmin=vmin, vmax=vmax)
+                       cmap="viridis_r", vmin=vmin, vmax=vmax)
         ax.set_xticks(range(len(pivot.columns)))
         ax.set_xticklabels([f"{c:.2f}" for c in pivot.columns])
         ax.set_yticks(range(len(pivot.index)))
@@ -170,15 +172,15 @@ def plot_exp3(csv_path: Path, out_dir: Path):
         ax.set_xlabel("cooling (λ)")
         ax.set_ylabel("temp_ini (T₀)")
         ax.set_title(f"iters_temp = {it}")
-        # Anotaciones dentro de las celdas
+        # Anotaciones dentro de las celdas: blanco sobre violeta (alto), negro sobre amarillo (bajo).
         for i in range(len(pivot.index)):
             for j in range(len(pivot.columns)):
                 v = pivot.values[i, j]
-                ax.text(j, i, f"{v:.1f}", ha="center", va="center",
-                        color="white" if v < (vmin+vmax)/2 else "black",
+                ax.text(j, i, f"{v:.0f}", ha="center", va="center",
+                        color="white" if v > (vmin+vmax)/2 else "black",
                         fontsize=8)
-    fig.colorbar(im, ax=axes, label="media_mejora (%)", shrink=0.8)
-    fig.suptitle("Exp 3 — Grid search SA: media de mejora (%)")
+    fig.colorbar(im, ax=axes, label="media_coste_fin (menor = mejor)", shrink=0.8)
+    fig.suptitle("Exp 3 — Grid search SA: coste final medio (minimizar)")
     _save(fig, out_dir / "exp3_heatmap.png")
 
     # 2. Top-10 configuraciones
@@ -407,6 +409,64 @@ def plot_exp7(csv_path: Path, out_dir: Path):
 
 
 # ============================================================================
+# Exp 8 – Variando número de camiones
+# Columnas: n_camiones, media_coste_ini, media_coste_fin,
+#           media_mejora, std_mejora, media_tiempo_s, std_tiempo_s,
+#           media_cobertura
+# ============================================================================
+
+def plot_exp8(csv_path: Path, out_dir: Path):
+    df = pd.read_csv(csv_path).sort_values("n_camiones")
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
+
+    # Coste inicial y final vs número de camiones
+    ax = axes[0]
+    ax.plot(df["n_camiones"], df["media_coste_ini"], "o--",
+            color="C0", label="Inicial (greedy)")
+    ax.plot(df["n_camiones"], df["media_coste_fin"], "s-",
+            color="C1", label="Final (SA)")
+    ax.set_xlabel("Número de camiones")
+    ax.set_ylabel("Coste medio")
+    ax.set_title("Coste vs flota")
+    ax.legend()
+
+    # Mejora con error bars
+    ax = axes[1]
+    ax.errorbar(df["n_camiones"], df["media_mejora"], yerr=df["std_mejora"],
+                fmt="^-", color="C2", capsize=4, linewidth=2)
+    ax.set_xlabel("Número de camiones")
+    ax.set_ylabel("Mejora media (%)")
+    ax.set_title("Mejora del SA vs flota")
+
+    # Tiempo y cobertura en ejes paralelos
+    ax = axes[2]
+    ax_t = ax
+    line_t = ax_t.plot(df["n_camiones"], df["media_tiempo_s"], "D-",
+                       color="C3", linewidth=2, label="Tiempo SA")
+    ax_t.fill_between(df["n_camiones"],
+                      df["media_tiempo_s"] - df["std_tiempo_s"],
+                      df["media_tiempo_s"] + df["std_tiempo_s"],
+                      alpha=0.2, color="C3")
+    ax_t.set_xlabel("Número de camiones")
+    ax_t.set_ylabel("Tiempo SA medio (s)", color="C3")
+    ax_t.tick_params(axis="y", labelcolor="C3")
+
+    ax_c = ax_t.twinx()
+    line_c = ax_c.plot(df["n_camiones"], df["media_cobertura"], "v-",
+                       color="C4", linewidth=2, label="Cobertura")
+    ax_c.axhline(100, color="green", linestyle="--", alpha=0.4)
+    ax_c.set_ylabel("Cobertura media (%)", color="C4")
+    ax_c.tick_params(axis="y", labelcolor="C4")
+    ax_c.set_ylim(0, 105)
+    ax.set_title("Tiempo y cobertura vs flota")
+    ax.grid(True, alpha=0.3)
+
+    fig.suptitle("Exp 8 — Impacto del número de camiones (n_clientes=15, n_paradas=25)")
+    _save(fig, out_dir / "exp8_camiones.png")
+
+
+# ============================================================================
 # Dispatcher
 # ============================================================================
 
@@ -441,6 +501,8 @@ def main():
             lambda p: plot_exp6(p, out_dir)),
         ("Exp 7", in_dir / "experimento7_heuristicas_combinadas.csv",
             lambda p: plot_exp7(p, out_dir)),
+        ("Exp 8", in_dir / "experimento8_camiones.csv",
+            lambda p: plot_exp8(p, out_dir)),
     ]
 
     procesados = []

@@ -9,13 +9,13 @@ struct PesosCoste {
     double w_dist               = 1.0;
 
     // Factor 2: maximizar carga inicial (penaliza capacidad infrautilizada).
-    double w_carga_baja         = 0.0;
+    double w_carga_baja         = 2.0;
 
     // Factor 3: ventanas horarias (penaliza retraso sobre cliente.hora_fin).
-    double w_ventanas           = 5000.0;
+    double w_ventanas           = 50.0;
 
     // Factor 4: evitar retornables temprano (penaliza el pico de volumen).
-    double w_retorno_temprano   = 200.0;
+    double w_retorno_temprano   = 5.0;
 
     // Restricción dura: el pico de volumen no debe exceder la capacidad.
     // Con operadores feasibility-preserving este término debería quedar a 0

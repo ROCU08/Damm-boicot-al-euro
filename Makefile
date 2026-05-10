@@ -84,6 +84,9 @@ exp6: $(TARGET_EXP)
 exp7: $(TARGET_EXP)
 	./$(TARGET_EXP) 7
 
+exp8: $(TARGET_EXP)
+	./$(TARGET_EXP) 8
+
 # =============================================================================
 # Debug (sanitizers) — disponible para ambos binarios
 # Uso: make debug | make debug-exp
@@ -133,5 +136,5 @@ clean-viz:
 
 clean-all: clean clean-viz
 
-.PHONY: all run exp exp1 exp2 exp3 exp4 exp5 exp6 exp7 \
+.PHONY: all run exp exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 \
         debug debug-exp viz run-viz clean clean-viz clean-all

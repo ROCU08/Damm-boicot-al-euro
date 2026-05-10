@@ -429,7 +429,7 @@ void exp2_inicializacion(const string& mejor_operador = "completo") {
  * Genera experimento3_grid_search.csv y al final imprime el top-5.
  */
 void exp3_grid_search(const string& mejor_operador = "completo",
-                      const string& mejor_greedy   = "set_cover")
+                      const string& mejor_greedy   = "cliente")
 {
     cout << "\n========== EXP 3: Grid Search SA ==========\n";
     cout << "   operador=" << mejor_operador << "  greedy=" << mejor_greedy << "\n";
@@ -947,7 +947,94 @@ void exp7_heuristicas_combinadas(
 }
 
 // =============================================================================
-// main – orquesta los 7 experimentos
+// Exp 8 – Variando número de camiones
+// =============================================================================
+/**
+ * Mantiene n_clientes y n_paradas fijos (escenario medio) y varía el número
+ * de camiones disponibles. Sirve para ver:
+ *   - Cuántos camiones hacen falta para cubrir todos los clientes (capacidad
+ *     agregada vs demanda).
+ *   - Cómo decae la utilización por camión (carga inicial / capacidad) al
+ *     añadir flota redundante.
+ *   - Cómo cambia el coste total (más camiones = más kilometraje fijo de
+ *     ida/vuelta al depósito).
+ * Genera experimento8_camiones.csv.
+ */
+void exp8_camiones(
+    const string&  mejor_operador = "completo",
+    const string&  mejor_greedy   = "set_cover",
+    const SAParams& opt_params    = BASE_PARAMS)
+{
+    cout << "\n========== EXP 8: Variando número de camiones ==========\n";
+
+    const int n_clientes = 15, n_paradas = 25;
+    const double cap = 40.0;
+    PesosCoste pesos;
+
+    // Cantidades de camiones a explorar.
+    vector<int> n_camiones_vals = { 3, 4, 5, 6, 8, 10};
+
+    ofstream out("experimento8_camiones.csv");
+    csv_line(out, {"n_camiones",
+                   "media_coste_ini","media_coste_fin",
+                   "media_mejora","std_mejora",
+                   "media_tiempo_s","std_tiempo_s",
+                   "media_cobertura"});
+
+    for (int nk : n_camiones_vals) {
+        vector<double> mejoras, costes_ini, costes_fin, tiempos, coberturas;
+
+        for (int seed : SEEDS) {
+            DatosProblema datos = generar_dataset(n_clientes, n_paradas, nk, cap, seed);
+            mt19937 gen(seed);
+
+            function<EstadoRuta(const EstadoRuta&)> vfn;
+            auto make_ctx = [&]() -> ContextoVecino {
+                return {datos, pesos.minutos_por_volumen, gen};
+            };
+            if (mejor_operador == "intra")
+                vfn = [&](const EstadoRuta& s) { auto c = make_ctx(); return vecino_solo_intra(s, c); };
+            else if (mejor_operador == "intra_inter")
+                vfn = [&](const EstadoRuta& s) { auto c = make_ctx(); return vecino_intra_inter(s, c); };
+            else if (mejor_operador == "paradas")
+                vfn = [&](const EstadoRuta& s) { auto c = make_ctx(); return vecino_con_paradas(s, c); };
+            else
+                vfn = [&](const EstadoRuta& s) { auto c = make_ctx(); return vecino_completo(s, c); };
+
+            RunResult r = ejecutar_sa(datos, pesos, mejor_greedy, vfn, opt_params, seed);
+            mejoras.push_back(r.mejora_pct);
+            costes_ini.push_back(r.coste_inicial);
+            costes_fin.push_back(r.coste_fin);
+            tiempos.push_back(r.tiempo_s);
+            coberturas.push_back(100.0 * r.clientes_cubiertos / r.n_clientes);
+        }
+
+        auto [mm, sm]    = stats(mejoras);
+        auto [mci, _1]   = stats(costes_ini);
+        auto [mcf, _2]   = stats(costes_fin);
+        auto [mt_, st_]  = stats(tiempos);
+        auto [mcob, _3]  = stats(coberturas);
+
+        csv_line(out, {
+            to_string(nk),
+            to_string(mci), to_string(mcf),
+            to_string(mm),  to_string(sm),
+            to_string(mt_), to_string(st_),
+            to_string(mcob)
+        });
+
+        cout << "  nk=" << nk
+             << "  coste_ini=" << fixed << setprecision(1) << mci
+             << "  coste_fin=" << mcf
+             << "  mejora="    << setprecision(2) << mm << "%"
+             << "  t="         << setprecision(3) << mt_ << "s"
+             << "  cob="       << setprecision(1) << mcob << "%\n";
+    }
+    cout << "   Exportado a experimento8_camiones.csv\n";
+}
+
+// =============================================================================
+// main – orquesta los experimentos
 // =============================================================================
 
 int main(int argc, char** argv) {
@@ -960,12 +1047,12 @@ int main(int argc, char** argv) {
     // del Exp 3). Por defecto se usan los base.
     // -------------------------------------------------------------------------
     const string OPT_OPERADOR = "completo";   // <- actualizar tras Exp 1
-    const string OPT_GREEDY   = "set_cover";  // <- actualizar tras Exp 2
+    const string OPT_GREEDY   = "cliente";  // <- actualizar tras Exp 2
     SAParams OPT_PARAMS;                      // <- actualizar tras Exp 3
     OPT_PARAMS.temp_ini   = 1000.0;
     OPT_PARAMS.temp_fin   =    0.01;
     OPT_PARAMS.cooling    =    0.95;
-    OPT_PARAMS.iters_temp =   100;
+    OPT_PARAMS.iters_temp =   200;
 
     // -------------------------------------------------------------------------
     auto run = [&](int n) {
@@ -979,6 +1066,7 @@ int main(int argc, char** argv) {
     if (run(5)) exp5_escalabilidad_separada(OPT_OPERADOR, OPT_GREEDY, OPT_PARAMS);
     if (run(6)) exp6_restriccion_dominio(OPT_OPERADOR, OPT_GREEDY, OPT_PARAMS);
     if (run(7)) exp7_heuristicas_combinadas(OPT_OPERADOR, OPT_GREEDY, OPT_PARAMS);
+    if (run(8)) exp8_camiones(OPT_OPERADOR, OPT_GREEDY, OPT_PARAMS);
 
     cout << "\n=== Todos los experimentos completados ===\n";
     return 0;
