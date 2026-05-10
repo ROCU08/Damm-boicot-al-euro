@@ -1,0 +1,35 @@
+services:
+  # Daemon de routing. Se queda corriendo escuchando en localhost:5000.
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:latest
+    container_name: osrm-mapa
+    restart: unless-stopped
+    command: osrm-routed --algorithm mld --max-table-size 5000 /data/area.osrm
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:5000/route/v1/driving/2.225,41.560;2.250,41.600 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Helper para correr osmium-tool one-shot. Construido localmente desde Dockerfile.osmium.
+  # Uso: docker compose -f mapa/docker-compose.yml run --rm osmium extract --bbox <...> -o /data/area.osm.pbf /data/cataluna-latest.osm.pbf
+  osmium:
+    build:
+      context: .
+      dockerfile: Dockerfile.osmium
+    image: damm-osmium:local
+    volumes:
+      - ./data:/data
+    profiles: ["tools"]
+
+  # Helper para correr osrm-* one-shot (extract/partition/customize) sin levantar el daemon.
+  osrm-tools:
+    image: ghcr.io/project-osrm/osrm-backend:latest
+    volumes:
+      - ./data:/data
+    entrypoint: ["sh", "-c"]
+    profiles: ["tools"]

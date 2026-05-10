@@ -1,0 +1,13 @@
+{
+  "coste_total":1810.100745,
+  "datos":{
+    "deposito":{"x":50.000000,"y":50.000000},
+    "clientes":[{"id":0,"hora_ini":615,"hora_fin":879,"volumen_recoger":3.10061,"volumen_devolver":2.33907},{"id":1,"hora_ini":696,"hora_fin":924,"volumen_recoger":4.675,"volumen_devolver":0.299925},{"id":2,"hora_ini":500,"hora_fin":703,"volumen_recoger":4.00225,"volumen_devolver":0.4286},{"id":3,"hora_ini":735,"hora_fin":972,"volumen_recoger":2.33847,"volumen_devolver":2.166},{"id":4,"hora_ini":780,"hora_fin":1069,"volumen_recoger":2.00467,"volumen_devolver":2.97663}],
+    "paradas":[{"id":0,"x":61.7482,"y":61.1653,"clientes_servidos":[1,0]},{"id":1,"x":0.706631,"y":2.30624,"clientes_servidos":[1]},{"id":2,"x":52.4775,"y":39.9861,"clientes_servidos":[1,2,3]},{"id":3,"x":4.66657,"y":97.3756,"clientes_servidos":[3]},{"id":4,"x":23.2771,"y":9.06064,"clientes_servidos":[4,0]},{"id":5,"x":61.8386,"y":38.2462,"clientes_servidos":[4]},{"id":6,"x":98.3231,"y":46.6763,"clientes_servidos":[1,0]},{"id":7,"x":85.994,"y":68.0308,"clientes_servidos":[3,1]},{"id":8,"x":45.0499,"y":1.3265,"clientes_servidos":[2,1]},{"id":9,"x":94.2202,"y":56.3288,"clientes_servidos":[2,0]}],
+    "camiones":[{"tipo":"CAMION","capacidad_volumen":30,"n_palets":6,"hora_inicio":480},{"tipo":"FURGONETA","capacidad_volumen":30,"n_palets":3,"hora_inicio":480}]
+  },
+  "solucion":{
+    "rutas":[{"camion_id":0,"paradas":[],"clientes_atendidos":[],"total_distancia":0,"total_carga_inicial":0,"total_pico_volumen":0,"total_retraso":0},{"camion_id":1,"paradas":[2,4],"clientes_atendidos":[[1,2,3],[4,0]],"total_distancia":101.738,"total_carga_inicial":16.121,"total_pico_volumen":16.121,"total_retraso":32}],
+    "no_servidos":[]
+  }
+}

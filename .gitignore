@@ -1,3 +1,85 @@
-claude.md
+# =============================================================================
+# C++ build artifacts
+# =============================================================================
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
 datos/
-.claude/
+/out_lunes
+# Binario producido por el Makefile
+damm
+damm.exe
+
+# Compile DBs / caches
+compile_commands.json
+.cache/
+.npm/
+.parcel-cache/
+.vite/
+node_modules/
+frontend/node_modules/
+
+# Node / frontend temp files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Sanitizers / profiling
+*.gcda
+*.gcno
+*.gcov
+*.profraw
+*.profdata
+
+# =============================================================================
+# Python (visualizador)
+# =============================================================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+pip-wheel-metadata/
+
+# =============================================================================
+# Outputs del pipeline
+# =============================================================================
+# JSONs generados por el binario en pruebas
+salida.json
+out.json
+test*.json
+gA.json
+gB.json
+v[1-9]*.json
+s[0-9]*.json
+big.json
+
+# Imágenes generadas por el visualizador
+viz/output/
+
+# =============================================================================
+# IDEs / editores
+# =============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+# Worktrees y herramientas locales
+# =============================================================================
+.claude/worktrees/
+
