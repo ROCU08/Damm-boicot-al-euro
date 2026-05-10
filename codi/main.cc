@@ -251,6 +251,5 @@ int main(int argc, char** argv) {
         cerr << "Error al exportar a " << output << "\n";
         return 1;
     }
-
     return 0;
 }
