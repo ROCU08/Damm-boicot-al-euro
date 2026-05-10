@@ -22,18 +22,18 @@ double fragmentacion_producto(const Solucion& s) {
 }
 
 // F2: Fragmentación por cliente
-// Para cada cliente, cuenta en cuántos palés distintos tiene ítems.
-// Penalización = suma de (palés_distintos - 1) por cliente.
-// Score 0 = cada cliente concentrado en un único palé.
+// Para cada cliente, cuenta en cuántos (palé, piso) distintos tiene ítems.
+// Penalización = suma de (ubicaciones_distintas - 1) por cliente.
+// Score 0 = cada cliente concentrado en un único (palé, piso).
 double fragmentacion_cliente(const Solucion& s) {
     double penalizacion = 0.0;
     for (const auto& entry : s.por_cliente) {
         const auto& posiciones = entry.second;
-        unordered_set<uint8_t> palets;
+        set<pair<uint8_t, uint8_t>> ubicaciones;
         for (const auto& p : posiciones)
-            palets.insert(p.palet);
-        if (palets.size() > 1)
-            penalizacion += palets.size() - 1;
+            ubicaciones.insert(make_pair(p.palet, p.piso));
+        if (ubicaciones.size() > 1)
+            penalizacion += ubicaciones.size() - 1;
     }
     return penalizacion;
 }

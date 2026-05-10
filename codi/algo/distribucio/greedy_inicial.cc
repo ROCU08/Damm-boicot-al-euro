@@ -5,8 +5,7 @@
 using namespace std;
 
 Solucion greedy_inicial(const vector<Item>& items, int n_palets) {
-    Solucion s;
-    s.n_palets = n_palets;
+    Solucion s(n_palets);
 
     map<uint16_t, vector<Item>> por_cliente;
     for (const auto& item : items)
