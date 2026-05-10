@@ -71,15 +71,20 @@ run-json: $(TARGET)
 
 # =============================================================================
 # Pipeline end-to-end (orquestador Python)
+# Genera 2 JSON: resultado_turno1.json (mañana) y resultado_turno2.json (tarde),
+# partidos por UMBRAL_TURNO_MIN (default 840 = 14:00).
 # Uso: make pipeline JUEGO=test/juego_lunes.csv OUT_DIR=out_lunes/
 #                    [FLOTA=2,3,1] [SEED=42] [WORKERS=0]
+#                    [UMBRAL_TURNO_MIN=840] [SOLO_TURNO=1|2]
 # =============================================================================
 
-JUEGO    ?= test/juego_lunes.csv
-OUT_DIR  ?= out_lunes
-FLOTA    ?= 2,3,1
-WORKERS  ?= 0
-PYTHON   ?= python3
+JUEGO            ?= test/juego_lunes.csv
+OUT_DIR          ?= out_lunes
+FLOTA            ?= 2,3,1
+WORKERS          ?= 0
+PYTHON           ?= python3
+UMBRAL_TURNO_MIN ?= 840
+SOLO_TURNO       ?=
 
 pipeline: $(TARGET) $(TARGET_DIST)
 	$(PYTHON) pipeline/orquestador.py \
@@ -89,7 +94,9 @@ pipeline: $(TARGET) $(TARGET_DIST)
 	    --seed $(SEED) \
 	    --greedy $(GREEDY) \
 	    --vecino $(VECINO) \
-	    --workers $(WORKERS)
+	    --workers $(WORKERS) \
+	    --umbral-turno-min $(UMBRAL_TURNO_MIN) \
+	    $(if $(SOLO_TURNO),--solo-turno $(SOLO_TURNO),)
 
 # =============================================================================
 # Targets de experimentos

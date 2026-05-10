@@ -20,28 +20,27 @@ const PALET_GAP = 0.6;     // espacio entre palets en X
 const PALET_BASE_HEIGHT = 0.15;
 
 // Posición 3D de un slot relativa al origen del camión.
-function posSlot(s: SlotOcupado): [number, number, number] {
+// `pisoEf` es el piso EFECTIVO tras aplicar gravedad (slots que han caído
+// para llenar huecos de cajas ya entregadas). En step=0 coincide con s.piso.
+function posSlot(s: SlotOcupado, pisoEf: number): [number, number, number] {
   const x = s.palet * (COLS + PALET_GAP) + s.col + 0.5;
-  const y = PALET_BASE_HEIGHT + s.piso + 0.5;
+  const y = PALET_BASE_HEIGHT + pisoEf + 0.5;
   const z = s.fila + 0.5;
   return [x, y, z];
 }
 
 interface SlotProps {
   slot: SlotOcupado;
-  highlight: boolean;
+  pisoEf: number;
 }
 
-function Slot({ slot, highlight }: SlotProps) {
+function Slot({ slot, pisoEf }: SlotProps) {
   const color = colorCliente(slot.cliente_id);
-  const opacity = highlight ? 1 : 0.18;
   return (
-    <mesh position={posSlot(slot)} castShadow receiveShadow>
+    <mesh position={posSlot(slot, pisoEf)} castShadow receiveShadow>
       <boxGeometry args={[SLOT_SIZE * 0.92, SLOT_SIZE * 0.92, SLOT_SIZE * 0.92]} />
       <meshStandardMaterial
         color={color}
-        transparent
-        opacity={opacity}
         roughness={slot.es_barril ? 0.3 : 0.7}
         metalness={slot.es_barril ? 0.6 : 0.05}
       />
@@ -95,12 +94,36 @@ export default function Camion3D({ distribucion, ordenRuta }: Props) {
   const cajasTotal = distribucion.layout.filter((s) => !s.es_barril).length;
   const capacidad = distribucion.n_palets * PISOS * FILAS * COLS;
 
-  // ¿Está este slot todavía en el camión en el step actual?
-  function aunEnCamion(cid: number): boolean {
-    const idx = ordenIdx.get(cid);
-    if (idx === undefined) return true; // cliente fuera del orden -> dejar visible
-    return idx >= step;
-  }
+  // Aplica "gravedad" en el step actual: por cada columna vertical (palet, fila, col),
+  // los slots cuyo cliente aún no ha sido entregado se reapilan desde piso 0
+  // sin huecos. Los entregados se ocultan (no se renderizan).
+  const slotsVisibles = useMemo(() => {
+    function aunEnCamion(cid: number): boolean {
+      const idx = ordenIdx.get(cid);
+      if (idx === undefined) return true;  // cliente fuera del orden → dejar visible
+      return idx >= step;
+    }
+
+    const porColumna = new Map<string, SlotOcupado[]>();
+    for (const s of distribucion.layout) {
+      const key = `${s.palet}-${s.fila}-${s.col}`;
+      const arr = porColumna.get(key);
+      if (arr) arr.push(s);
+      else porColumna.set(key, [s]);
+    }
+
+    const out: { slot: SlotOcupado; pisoEf: number }[] = [];
+    for (const arr of porColumna.values()) {
+      arr.sort((a, b) => a.piso - b.piso);
+      let pisoEf = 0;
+      for (const s of arr) {
+        if (!aunEnCamion(s.cliente_id)) continue;  // entregado → no renderizar
+        out.push({ slot: s, pisoEf });
+        pisoEf += 1;
+      }
+    }
+    return out;
+  }, [distribucion.layout, ordenIdx, step]);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -123,9 +146,9 @@ export default function Camion3D({ distribucion, ordenRuta }: Props) {
           <PaletBase key={i} paletIdx={i} resaltado={false} />
         ))}
 
-        {/* Slots ocupados */}
-        {distribucion.layout.map((slot, i) => (
-          <Slot key={i} slot={slot} highlight={aunEnCamion(slot.cliente_id)} />
+        {/* Slots ocupados (con gravedad aplicada según step) */}
+        {slotsVisibles.map(({ slot, pisoEf }, i) => (
+          <Slot key={i} slot={slot} pisoEf={pisoEf} />
         ))}
 
         {/* Etiquetas de eje */}

@@ -125,6 +125,7 @@ export interface KPIsGlobales {
 }
 
 export interface ResultadoFinal {
+  turno?: number;              // 1 = mañana, 2 = tarde. Opcional por compat.
   datos: DatosProblema;
   rutas: RutaSolucion[];
   distribuciones: DistribucionOutput[];
