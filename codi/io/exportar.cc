@@ -73,6 +73,7 @@ string camion_json(const Camion& c) {
     ostringstream s;
     s << "{\"tipo\":\"" << tipo_a_string(c.tipo) << "\""
       << ",\"capacidad_volumen\":" << c.capacidad_volumen
+      << ",\"n_palets\":" << c.n_palets
       << ",\"hora_inicio\":" << c.hora_inicio
       << "}";
     return s.str();

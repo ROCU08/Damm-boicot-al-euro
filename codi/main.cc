@@ -11,6 +11,7 @@
 #include "algo/ruta/vecino/vecino.h"
 #include "algo/ruta/greedy/greedy.h"
 #include "io/exportar.h"
+#include "io/cargar_json.h"
 
 // El template de SA está en un .cc; lo incluimos directo (es solo un template).
 #include "algo/sa/sa.cc"
@@ -92,10 +93,14 @@ DatosProblema generar_dataset(int n_clientes, int n_paradas, int n_camiones,
     }
 
     // Camiones (alternando tipo entre CAMION y FURGONETA).
+    // n_palets se asigna por convención (CAMION=6, FURGONETA=3); en el dataset
+    // sintético la capacidad está en m³, así que n_palets es informativo y
+    // sólo se usa cuando el JSON de salida lo lee el SA-distribución.
     datos.camiones.resize(n_camiones);
     for (int k = 0; k < n_camiones; ++k) {
         datos.camiones[k].tipo = (k % 2 == 0) ? TipoVehiculo::CAMION : TipoVehiculo::FURGONETA;
         datos.camiones[k].capacidad_volumen = cap_camion;
+        datos.camiones[k].n_palets = (k % 2 == 0) ? 6 : 3;
         datos.camiones[k].hora_inicio = hora_jornada_ini;
     }
 
@@ -135,27 +140,71 @@ DatosProblema generar_dataset(int n_clientes, int n_paradas, int n_camiones,
 // Driver de pruebas
 // =============================================================================
 
-int main(int argc, char** argv) {
-    string scenario   = (argc > 1) ? argv[1] : "pequeno";
-    int seed          = (argc > 2) ? atoi(argv[2]) : 42;
-    string greedy_kind = (argc > 3) ? argv[3] : "set_cover";
-    string vecino_kind = (argc > 4) ? argv[4] : "completo";
-    string output     = (argc > 5) ? argv[5] : "salida.json";
+// Imprime ayuda con los dos modos de uso.
+static void print_usage() {
+    cerr << "Modo sintetico:\n"
+         << "  damm <escenario> [seed] [greedy] [vecino] [output]\n"
+         << "    escenario = pequeno | medio | grande\n"
+         << "    greedy    = set_cover | cliente   (default: set_cover)\n"
+         << "    vecino    = intra | intra_inter | paradas | completo (default: completo)\n\n"
+         << "Modo desde JSON real (producido por pipeline/cargar_csv.py):\n"
+         << "  damm --from-json <datos.json> [output] [seed] [greedy] [vecino]\n";
+}
 
-    // Seleccionar tamaño del dataset.
-    DatosProblema datos;
-    if (scenario == "pequeno") {
-        datos = generar_dataset(5, 10, 2, 30.0, seed);
-    } else if (scenario == "medio") {
-        datos = generar_dataset(15, 25, 3, 40.0, seed);
-    } else if (scenario == "grande") {
-        datos = generar_dataset(30, 50, 5, 50.0, seed);
+int main(int argc, char** argv) {
+    string scenario, datos_path, output;
+    int seed = 42;
+    string greedy_kind = "set_cover";
+    string vecino_kind = "completo";
+    bool from_json = false;
+
+    // Modo --from-json: argv = damm --from-json datos.json [output] [seed] [greedy] [vecino]
+    if (argc >= 3 && string(argv[1]) == "--from-json") {
+        from_json   = true;
+        datos_path  = argv[2];
+        output      = (argc > 3) ? argv[3] : "salida.json";
+        seed        = (argc > 4) ? atoi(argv[4]) : 42;
+        greedy_kind = (argc > 5) ? argv[5] : "set_cover";
+        vecino_kind = (argc > 6) ? argv[6] : "completo";
+    } else if (argc >= 2 && string(argv[1]) != "--help" && string(argv[1]) != "-h") {
+        // Modo sintético (compatible con la firma original).
+        scenario    = argv[1];
+        seed        = (argc > 2) ? atoi(argv[2]) : 42;
+        greedy_kind = (argc > 3) ? argv[3] : "set_cover";
+        vecino_kind = (argc > 4) ? argv[4] : "completo";
+        output      = (argc > 5) ? argv[5] : "salida.json";
     } else {
-        cerr << "Escenarios validos: pequeno | medio | grande\n";
-        return 1;
+        print_usage();
+        return (argc > 1) ? 0 : 1;
     }
 
-    cout << "=== Escenario: " << scenario << " (seed=" << seed << ") ===\n";
+    DatosProblema datos;
+    if (from_json) {
+        cout << "=== Carga desde JSON: " << datos_path << " ===\n";
+        try {
+            if (!cargar_datos_problema(datos_path, datos)) {
+                cerr << "Error: no se pudo abrir " << datos_path << "\n";
+                return 1;
+            }
+        } catch (const exception& e) {
+            cerr << "Error parseando JSON: " << e.what() << "\n";
+            return 1;
+        }
+    } else {
+        // Seleccionar tamaño del dataset sintético.
+        if (scenario == "pequeno") {
+            datos = generar_dataset(5, 10, 2, 30.0, seed);
+        } else if (scenario == "medio") {
+            datos = generar_dataset(15, 25, 3, 40.0, seed);
+        } else if (scenario == "grande") {
+            datos = generar_dataset(30, 50, 5, 50.0, seed);
+        } else {
+            cerr << "Escenarios validos: pequeno | medio | grande\n";
+            return 1;
+        }
+        cout << "=== Escenario: " << scenario << " (seed=" << seed << ") ===\n";
+    }
+
     cout << "  clientes: " << datos.clientes.size() << "\n";
     cout << "  paradas:  " << datos.paradas.size() << "\n";
     cout << "  camiones: " << datos.camiones.size() << "\n\n";

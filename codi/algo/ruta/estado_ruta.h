@@ -57,6 +57,11 @@ struct Camion {
     TipoVehiculo tipo;
     double capacidad_volumen;
 
+    // Número de palets físicos del camión (1..8). El SA-ruta no lo usa: lo
+    // consume el SA-distribución para dimensionar el layout 3D. Lo guardamos
+    // aquí para que viaje en el JSON de salida y el orquestador lo lea.
+    int n_palets = 0;
+
     // Hora a la que el camión sale del depósito (mismas unidades que Cliente::hora_ini).
     int hora_inicio;
 };
