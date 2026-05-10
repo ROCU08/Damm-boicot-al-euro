@@ -69,6 +69,9 @@ export interface RutaSolucion {
   total_carga_inicial: number;
   total_pico_volumen: number;
   total_retraso: number;
+  // Polilínea real OSRM: [[lat, lon], ...]. Si null/ausente el frontend
+  // dibuja una línea recta entre paradas como fallback.
+  polilinea_geo?: [number, number][] | null;
 }
 
 // Shape "raw" emitido por damm/exportar.cc

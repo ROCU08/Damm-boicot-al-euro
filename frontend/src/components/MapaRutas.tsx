@@ -77,11 +77,14 @@ export default function MapaRutas({ resultado, camionSel, paradaSel, onParadaCli
       />
       <FitToBounds resultado={resultado} />
 
-      {/* Polilíneas de cada ruta */}
+      {/* Polilíneas de cada ruta. Usa la polilínea real OSRM si está
+          disponible, si no fallback a una línea recta entre paradas. */}
       {rutas.map((r) => {
         const visible = camionSel === null || camionSel === r.camion_id;
         if (!visible) return null;
-        const pts = puntosDeRuta(r, datos.paradas, datos.deposito);
+        const pts = (r.polilinea_geo && r.polilinea_geo.length > 0)
+          ? r.polilinea_geo
+          : puntosDeRuta(r, datos.paradas, datos.deposito);
         return (
           <Polyline
             key={r.camion_id}
