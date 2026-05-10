@@ -2,3 +2,7 @@
 src/
 datos/
 CLAUDE.md
+*.exe
+*.o
+*.json
+*.png
