@@ -7,7 +7,8 @@ SRCS_COMMON = codi/algo/ruta/estado_ruta.cc \
               codi/algo/ruta/operadores/op_ruta.cc \
               codi/algo/ruta/vecino/vecino.cc \
               codi/algo/ruta/greedy/greedy.cc \
-              codi/io/exportar.cc
+              codi/io/exportar.cc \
+              codi/io/cargar_json.cc
 
 # --- Binario principal (comportamiento original) ---
 SRCS_MAIN = codi/main.cc $(SRCS_COMMON)
@@ -21,6 +22,10 @@ OBJS_EXP = $(SRCS_EXP:.cc=.o)
 DEPS_EXP = $(OBJS_EXP:.o=.d)
 TARGET_EXP = damm-exp
 
+# --- Binario del SA-distribución (single-TU: incluye estado_distr.cc, etc.) ---
+SRCS_DIST  = codi/distribucio_main.cc
+TARGET_DIST = damm-dist
+
 # =============================================================================
 # Targets de compilación
 # =============================================================================
@@ -32,6 +37,10 @@ $(TARGET): $(OBJS_MAIN)
 
 $(TARGET_EXP): $(OBJS_EXP)
 	$(CXX) $(CXXFLAGS) -o $@ $^
+
+# damm-dist se compila como un único TU (compose-by-include).
+$(TARGET_DIST): $(SRCS_DIST)
+	$(CXX) $(CXXFLAGS) -o $@ $<
 
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
@@ -53,6 +62,34 @@ OUTPUT   ?= salida.json
 
 run: $(TARGET)
 	./$(TARGET) $(SCENARIO) $(SEED) $(GREEDY) $(VECINO) $(OUTPUT)
+
+# Modo desde JSON real producido por pipeline/cargar_csv.py.
+# Uso: make run-json DATOS=datos_lunes.json [OUTPUT=salida.json]
+DATOS ?= datos_lunes.json
+run-json: $(TARGET)
+	./$(TARGET) --from-json $(DATOS) $(OUTPUT) $(SEED) $(GREEDY) $(VECINO)
+
+# =============================================================================
+# Pipeline end-to-end (orquestador Python)
+# Uso: make pipeline JUEGO=test/juego_lunes.csv OUT_DIR=out_lunes/
+#                    [FLOTA=2,3,1] [SEED=42] [WORKERS=0]
+# =============================================================================
+
+JUEGO    ?= test/juego_lunes.csv
+OUT_DIR  ?= out_lunes
+FLOTA    ?= 2,3,1
+WORKERS  ?= 0
+PYTHON   ?= python3
+
+pipeline: $(TARGET) $(TARGET_DIST)
+	$(PYTHON) pipeline/orquestador.py \
+	    --juego $(JUEGO) \
+	    --out-dir $(OUT_DIR) \
+	    --flota $(FLOTA) \
+	    --seed $(SEED) \
+	    --greedy $(GREEDY) \
+	    --vecino $(VECINO) \
+	    --workers $(WORKERS)
 
 # =============================================================================
 # Targets de experimentos
@@ -128,7 +165,8 @@ clean:
 	rm -f $(OBJS_MAIN) $(DEPS_MAIN) $(OBJS_EXP) $(DEPS_EXP) \
 	      $(TARGET) $(TARGET).exe \
 	      $(TARGET_EXP) $(TARGET_EXP).exe \
-	      damm-debug damm-exp-debug \
+	      $(TARGET_DIST) $(TARGET_DIST).exe \
+	      damm-debug damm-exp-debug damm-dist-debug \
 	      experimento*.csv salida.json
 
 clean-viz:
@@ -136,5 +174,5 @@ clean-viz:
 
 clean-all: clean clean-viz
 
-.PHONY: all run exp exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 \
-        debug debug-exp viz run-viz clean clean-viz clean-all
+.PHONY: all run run-json pipeline exp exp1 exp2 exp3 exp4 exp5 exp6 exp7 exp8 \
+        damm-dist debug debug-exp viz run-viz clean clean-viz clean-all
