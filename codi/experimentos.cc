@@ -21,6 +21,7 @@
 #include <iomanip>
 #include <string>
 #include <vector>
+#include <map>
 #include <functional>
 #include <chrono>
 #include <numeric>
@@ -171,7 +172,7 @@ DatosProblema generar_dataset(int n_clientes, int n_paradas, int n_camiones,
 // ----------------------------------------------------------------------------
 struct RunResult {
     double coste_inicial;
-    double coste_final;
+    double coste_fin;
     double mejora_pct;    // (ini - fin) / ini * 100
     double tiempo_s;
     int    clientes_cubiertos;
@@ -400,10 +401,10 @@ void exp2_inicializacion(const string& mejor_operador = "completo") {
          << setw(14) << "cob(%)"
          << "\n";
     string mejor_greedy;
-    double mejor_coste_fin = 1e18;
     for (const string& gk : greedys) {
         auto [mm, sm] = stats(mejoras[gk]);
         auto [mc, sc] = stats(coberturas[gk]);
+        (void)sc;   // sc no se usa, se descarta el unused-warning
         // Usamos mejora media para seleccionar
         if (mm > (mejor_greedy.empty() ? -1e9 : stats(mejoras[mejor_greedy]).first))
             mejor_greedy = gk;
@@ -838,37 +839,49 @@ void exp7_heuristicas_combinadas(
             DatosProblema datos = generar_dataset(n_clientes, n_paradas, n_camiones, cap, seed);
             mt19937 gen(seed);
 
-            // Pesos base para H1 (distancia/tiempo)
-            PesosCoste pesos_base;          // usa minutos_por_volumen, etc.
-
-            // Pesos modificados para H = H1 + w*H2 (retraso)
-            PesosCoste pesos_w_obj = pesos_base;
-            pesos_w_obj.penalizacion_retraso = w;   // multiplica el retraso
-
-            auto coste_h  = [&](const EstadoRuta& s) {
-                return calcular_coste(s, datos, pesos_w_obj);
-            };
-
-            // Función auxiliar H1 sola (retraso=0)
-            PesosCoste pesos_H1 = pesos_base;
-            pesos_H1.penalizacion_retraso = 0.0;
+            // H1 = distancia (w_dist=1, resto a 0).
+            PesosCoste pesos_H1;
+            pesos_H1.w_dist             = 1.0;
+            pesos_H1.w_carga_baja       = 0.0;
+            pesos_H1.w_ventanas         = 0.0;
+            pesos_H1.w_retorno_temprano = 0.0;
+            pesos_H1.w_capacidad        = 0.0;
+            pesos_H1.w_no_servidos      = 0.0;
             auto coste_h1 = [&](const EstadoRuta& s) {
                 return calcular_coste(s, datos, pesos_H1);
             };
-            // H2 sola (solo retraso, peso 1)
+
+            // H2 = retraso (w_ventanas=1, resto a 0).
             PesosCoste pesos_H2;
-            pesos_H2.penalizacion_retraso    = 1.0;
-            pesos_H2.minutos_por_volumen     = 0.0;  // suprimir distancia
+            pesos_H2.w_dist             = 0.0;
+            pesos_H2.w_carga_baja       = 0.0;
+            pesos_H2.w_ventanas         = 1.0;
+            pesos_H2.w_retorno_temprano = 0.0;
+            pesos_H2.w_capacidad        = 0.0;
+            pesos_H2.w_no_servidos      = 0.0;
             auto coste_h2 = [&](const EstadoRuta& s) {
                 return calcular_coste(s, datos, pesos_H2);
             };
 
-            // Greedy inicial
+            // H = H1 + w*H2: w_dist=1, w_ventanas=w, otros 0.
+            // w_no_servidos se mantiene alto para no perder cobertura.
+            PesosCoste pesos_w_obj;
+            pesos_w_obj.w_dist             = 1.0;
+            pesos_w_obj.w_carga_baja       = 0.0;
+            pesos_w_obj.w_ventanas         = w;
+            pesos_w_obj.w_retorno_temprano = 0.0;
+            pesos_w_obj.w_capacidad        = 0.0;
+            pesos_w_obj.w_no_servidos      = 100000.0;
+            auto coste_h  = [&](const EstadoRuta& s) {
+                return calcular_coste(s, datos, pesos_w_obj);
+            };
+
+            // Greedy inicial (usa minutos_por_volumen del base default).
             EstadoRuta inicial;
             if (mejor_greedy == "set_cover")
-                inicial = greedy_set_cover(datos, pesos_base.minutos_por_volumen);
+                inicial = greedy_set_cover(datos, pesos_w_obj.minutos_por_volumen);
             else
-                inicial = greedy_por_cliente(datos, pesos_base.minutos_por_volumen);
+                inicial = greedy_por_cliente(datos, pesos_w_obj.minutos_por_volumen);
 
             double H1_ini = coste_h1(inicial);
             double H2_ini = coste_h2(inicial);
