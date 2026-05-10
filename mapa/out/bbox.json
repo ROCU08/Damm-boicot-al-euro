@@ -1,0 +1,10 @@
+{
+  "lat_min": 41.342875,
+  "lat_max": 42.164097,
+  "lon_min": 1.961012,
+  "lon_max": 2.386694,
+  "n_points_total": 813,
+  "n_points_inside": 784,
+  "outlier_pct": 1.0,
+  "margin": 0.05
+}

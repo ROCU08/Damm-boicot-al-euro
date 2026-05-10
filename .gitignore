@@ -8,6 +8,7 @@
 *.dylib
 *.dll
 *.exe
+datos/
 
 # Binario producido por el Makefile
 damm
